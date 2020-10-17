@@ -186,3 +186,29 @@ forest_scores = cross_val_score(forest_reg, housing_prepared, housing_labels,
 forest_rmse_scores = np.sqrt(-forest_scores)
 
 display_scores(forest_rmse_scores)
+
+
+
+# 微调模型
+# 网格搜索
+from sklearn.model_selection import GridSearchCV
+
+param_grid = [
+    # try 12 (3×4) combinations of hyperparameters
+    {'n_estimators': [3, 10, 30], 'max_features': [2, 4, 6, 8]},
+    # then try 6 (2×3) combinations with bootstrap set as False
+    {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]},
+  ]
+
+forest_reg = RandomForestRegressor(random_state=42)
+# train across 5 folds, that's a total of (12+6)*5=90 rounds of training 
+grid_search = GridSearchCV(forest_reg, 
+                           param_grid, 
+                           cv=5,
+                           scoring='neg_mean_squared_error', 
+                           return_train_score=True)
+
+grid_search.fit(housing_prepared, housing_labels)
+
+
+
