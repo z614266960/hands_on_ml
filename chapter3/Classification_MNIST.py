@@ -53,3 +53,96 @@ print(recall_score(y_train_5, y_train_pred))
 from sklearn.metrics import f1_score
 print(f1_score(y_train_5, y_train_pred))
 
+# 阈值
+y_scores = sgd_clf.decision_function([some_digit])
+print(y_scores)
+threshold = 0
+y_some_digit_pred = (y_scores > threshold)
+print(y_some_digit_pred)
+threshold = 200000
+y_some_digit_pred = (y_scores > threshold)
+print(y_some_digit_pred)
+
+y_scores = cross_val_predict(sgd_clf,X_train,y_train_5,cv=3,method='decision_function')
+from sklearn.metrics import precision_recall_curve
+precisions, recalls, thresholds = precision_recall_curve(y_train_5, y_scores)
+
+def plot_precision_recall_vs_threshold(precisions,recalls,thresholds):
+    plt.plot(thresholds,
+             precisions[:-1],
+            "b--",
+            label="Precision")
+    
+    plt.plot(thresholds,
+             recalls[:-1],
+            "g-",
+            label="Recall")
+    plt.xlabel("Threshold",fontsize=16)
+    plt.legend(loc="upper left",fontsize=16)
+    plt.ylim([0,1])
+    
+plt.figure(figsize=(8, 4))
+plot_precision_recall_vs_threshold(precisions,recalls,thresholds)
+plt.xlim([-700000, 700000])
+plt.show()
+
+def plot_precision_vs_recall(precisions, recalls):
+    plt.plot(recalls, 
+             precisions, 
+             "b-", 
+             linewidth=2)
+    
+    plt.xlabel("Recall", fontsize=16)
+    plt.ylabel("Precision", fontsize=16)
+    plt.axis([0, 1, 0, 1])
+
+plt.figure(figsize=(8, 6))
+plot_precision_vs_recall(precisions, recalls)
+plt.show()
+
+
+# ROC
+from sklearn.metrics import roc_curve
+fpr, tpr, thresholds = roc_curve(y_train_5, y_scores)
+
+def plot_roc_curve(fpr, tpr, label=None):
+    plt.plot(fpr, tpr, linewidth=2, label=label)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.axis([0, 1, 0, 1])
+    plt.xlabel('False Positive Rate', fontsize=16)
+    plt.ylabel('True Positive Rate', fontsize=16)
+
+plt.figure(figsize=(8, 6))
+plot_roc_curve(fpr, tpr)
+plt.show()
+
+from sklearn.metrics import roc_auc_score
+roc_auc_score(y_train_5, y_scores)
+
+# 随机森林
+from sklearn.ensemble import RandomForestClassifier
+forest_clf = RandomForestClassifier(random_state=42)
+y_probas_forest = cross_val_predict(forest_clf, X_train, y_train_5, cv=3,
+                                    method="predict_proba")
+y_scores_forest = y_probas_forest[:, 1] # score = proba of positive class
+fpr_forest, tpr_forest, thresholds_forest = roc_curve(y_train_5,y_scores_forest)
+
+plt.figure(figsize=(8, 6))
+
+plt.plot(fpr, 
+         tpr, 
+         "b:", 
+         linewidth=2, label="SGD")
+
+plot_roc_curve(fpr_forest, 
+               tpr_forest, 
+               "Random Forest")
+
+plt.legend(loc="lower right", fontsize=16)
+plt.show()
+
+# 多类别分类器
+sgd_clf.fit(X_train, y_train)
+sgd_clf.predict([some_digit])
+some_digit_scores = sgd_clf.decision_function([some_digit])
+some_digit_scores
