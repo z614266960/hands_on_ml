@@ -12,7 +12,12 @@ X,y = mnist['data'],mnist['target']
 # 展示数字
 import matplotlib
 import matplotlib.pyplot as plt
-
+def plot_digit(data):
+    image = data.reshape(28, 28)
+    plt.imshow(image, cmap = matplotlib.cm.binary,
+               interpolation="nearest")
+    plt.axis("off")
+    
 some_digit = X[36000]
 some_digit_image = some_digit.reshape(28,28)
 plt.imshow(some_digit_image,cmap = matplotlib.cm.binary,
@@ -145,4 +150,94 @@ plt.show()
 sgd_clf.fit(X_train, y_train)
 sgd_clf.predict([some_digit])
 some_digit_scores = sgd_clf.decision_function([some_digit])
-some_digit_scores
+
+# 一对一预测期
+from sklearn.multiclass import OneVsOneClassifier
+
+ovo_clf = OneVsOneClassifier(SGDClassifier(max_iter=5, random_state=42))
+ovo_clf.fit(X_train, y_train)
+ovo_clf.predict([some_digit])
+
+# 随机森林预测，与所有结果的概率
+forest_clf.fit(X_train, y_train)
+print(forest_clf.predict([some_digit]))
+print(forest_clf.predict_proba([some_digit]))
+
+# 交叉验证精度
+cross_val_score(sgd_clf, X_train, y_train, cv=3, scoring="accuracy")
+
+# 缩放提升精度
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train.astype(np.float64))
+cross_val_score(sgd_clf, X_train_scaled, y_train, cv=3, scoring="accuracy")
+
+# 错误分析
+y_train_pred = cross_val_predict(sgd_clf, X_train_scaled, y_train, cv=3)
+conf_mx = confusion_matrix(y_train, y_train_pred)
+print(conf_mx)
+
+plt.matshow(conf_mx,cmap=plt.cm.gray)
+plt.show()
+
+row_sums = conf_mx.sum(axis=1,keepdims=True)
+norm_conf_mx = conf_mx/row_sums
+np.fill_diagonal(norm_conf_mx,0)
+plt.matshow(norm_conf_mx,cmap=plt.cm.gray)
+plt.show()
+
+cl_a, cl_b = 3, 5
+X_aa = X_train[(y_train == cl_a) & (y_train_pred == cl_a)]
+X_ab = X_train[(y_train == cl_a) & (y_train_pred == cl_b)]
+X_ba = X_train[(y_train == cl_b) & (y_train_pred == cl_a)]
+X_bb = X_train[(y_train == cl_b) & (y_train_pred == cl_b)]
+
+# EXTRA
+def plot_digits(instances, images_per_row=10, **options):
+    size = 28
+    images_per_row = min(len(instances), images_per_row)
+    images = [instance.reshape(size,size) for instance in instances]
+    n_rows = (len(instances) - 1) // images_per_row + 1
+    row_images = []
+    n_empty = n_rows * images_per_row - len(instances)
+    images.append(np.zeros((size, size * n_empty)))
+    for row in range(n_rows):
+        rimages = images[row * images_per_row : (row + 1) * images_per_row]
+        row_images.append(np.concatenate(rimages, axis=1))
+    image = np.concatenate(row_images, axis=0)
+    plt.imshow(image, cmap = matplotlib.cm.binary, **options)
+    plt.axis("off")
+    
+plt.figure(figsize=(8,8))
+plt.subplot(221); plot_digits(X_aa[:25], images_per_row=5)
+plt.subplot(222); plot_digits(X_ab[:25], images_per_row=5)
+plt.subplot(223); plot_digits(X_ba[:25], images_per_row=5)
+plt.subplot(224); plot_digits(X_bb[:25], images_per_row=5)
+plt.show()
+
+# 多标签分类
+from sklearn.neighbors import KNeighborsClassifier
+
+y_train_large = (y_train >= 7)
+y_train_odd = (y_train % 2 == 1)
+y_multilabel = np.c_[y_train_large, y_train_odd]
+
+knn_clf = KNeighborsClassifier()
+knn_clf.fit(X_train, y_multilabel)
+
+print(knn_clf.predict([some_digit]))
+
+# 多输出，去底噪
+noise = np.random.randint(0, 100, (len(X_train), 784))
+X_train_mod = X_train + noise
+noise = np.random.randint(0, 100, (len(X_test), 784))
+X_test_mod = X_test + noise
+y_train_mod = X_train
+y_test_mod = X_test
+
+some_index = 1500
+plt.subplot(1,2,1); plot_digit(X_test_mod[some_index])
+plt.subplot(1,2,2); plot_digit(y_test_mod[some_index])
+plt.show()
+
